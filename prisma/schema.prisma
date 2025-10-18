@@ -1,0 +1,203 @@
+// Database schema for the learning platform
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Learning preferences
+  preferences UserPreferences?
+  
+  // Learning sessions and progress
+  learningSessions    LearningSession[] @relation("LearningSessions")
+  progress    LearningProgress[]
+  
+  // User interests and topics
+  interests   UserInterest[]
+  
+  // Authentication
+  accounts    Account[]
+  sessions    Session[]
+}
+
+model UserPreferences {
+  id          String @id @default(cuid())
+  userId      String @unique
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Learning preferences
+  dailyGoalMinutes    Int      @default(20)
+  preferredTopics     String[] // Array of topic IDs
+  difficultyLevel     String   @default("intermediate") // beginner, intermediate, advanced
+  learningStyle       String   @default("mixed") // visual, auditory, reading, mixed
+  
+  // Notification preferences
+  morningReminder     Boolean  @default(true)
+  reminderTime        String   @default("08:00")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LearningSession {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("LearningSessions", fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Session details
+  topicId     String
+  topic       Topic    @relation(fields: [topicId], references: [id])
+  contentId   String
+  contentType String   // "article", "video", "quiz", "interactive"
+  
+  // Session metrics
+  durationMinutes Int
+  completed       Boolean @default(false)
+  score           Float?  // For quizzes and assessments
+  
+  // Learning analytics
+  engagementScore Float?  // How engaged the user was
+  difficultyRating Int?   // User's rating of difficulty (1-5)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LearningProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  topicId     String
+  topic       Topic    @relation(fields: [topicId], references: [id])
+  
+  // Progress metrics
+  totalSessions    Int @default(0)
+  totalMinutes     Int @default(0)
+  streakDays       Int @default(0)
+  lastLearnedAt    DateTime?
+  
+  // Mastery level (0-100)
+  masteryLevel     Float @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([userId, topicId])
+}
+
+model Topic {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  category    String   // "geography", "vocabulary", "technology", "custom"
+  
+  // Topic metadata
+  difficulty  String   @default("intermediate")
+  estimatedMinutes Int @default(15)
+  
+  // Content and sessions
+  content     Content[]
+  sessions    LearningSession[]
+  progress    LearningProgress[]
+  interests   UserInterest[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Content {
+  id          String   @id @default(cuid())
+  topicId     String
+  topic       Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  
+  // Content details
+  title       String
+  description String?
+  type        String   // "article", "video", "quiz", "interactive", "flashcard"
+  url         String?
+  content     String?  // For text-based content
+  
+  // Content metadata
+  difficulty  String   @default("intermediate")
+  estimatedMinutes Int @default(10)
+  tags        String[] // For categorization and search
+  
+  // Vector embedding for recommendations
+  embedding   Float[] // Vector representation of content
+  
+  // Analytics
+  viewCount   Int      @default(0)
+  rating      Float?   // Average user rating
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UserInterest {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  topicId     String
+  topic       Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  
+  // Interest strength (0-1)
+  strength    Float    @default(0.5)
+  
+  // Learning patterns
+  preferredContentTypes String[] // ["article", "video", "quiz"]
+  averageSessionLength  Int?     // In minutes
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([userId, topicId])
+}
+
+// NextAuth.js required models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
