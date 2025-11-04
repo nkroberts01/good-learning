@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import type { LearningCategory, UserPreference } from '../../lib/types'
+import type { LearningCategory } from '../../lib/types'
 
 const CATEGORIES: { value: LearningCategory; label: string; description: string }[] = [
   { value: 'geography', label: 'Geography', description: 'Learn about countries, cities, and places' },
