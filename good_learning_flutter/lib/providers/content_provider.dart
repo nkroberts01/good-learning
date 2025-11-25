@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:good_learning_flutter/models/content_type.dart';
 import 'package:good_learning_flutter/models/difficulty.dart';
+import '../services/dictionary_api_service.dart';
 
 /// Placeholder data structures for content
 /// These will be replaced with real data sources later
@@ -146,11 +147,28 @@ class ContentProvider extends ChangeNotifier {
   }
 
   /// Get word of the day
-  /// Returns mock data for now
+  /// Fetches real data from Free Dictionary API with fallback to mock data
   Future<WordOfTheDay> getWordOfTheDay() async {
+    try {
+      // Try to fetch from API
+      final apiData = await DictionaryApiService.getWordOfTheDayData();
+      
+      if (apiData != null) {
+        return WordOfTheDay(
+          word: apiData['word'] as String,
+          definition: apiData['definition'] as String,
+          example: apiData['example'] as String?,
+          etymology: apiData['etymology'] as String?,
+        );
+      }
+    } catch (e) {
+      // If API fails, fall back to mock data
+      // In production, you might want to log this error
+    }
+    
+    // Fallback to mock data if API fails
     await Future.delayed(const Duration(milliseconds: 300));
     
-    // Rotate through different words (in a real app, this would be date-based)
     final words = [
       WordOfTheDay(
         word: 'Serendipity',
