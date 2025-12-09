@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:good_learning_flutter/models/content_type.dart';
 import 'package:good_learning_flutter/models/difficulty.dart';
 import '../services/dictionary_api_service.dart';
+import '../services/geography_api_service.dart';
 
 /// Placeholder data structures for content
 /// These will be replaced with real data sources later
@@ -196,8 +197,29 @@ class ContentProvider extends ChangeNotifier {
   }
 
   /// Get geography fact
-  /// Returns mock data for now
+  /// Fetches real data from REST Countries API with fallback to mock data
   Future<GeographyFact> getGeographyFact({required Difficulty difficulty}) async {
+    try {
+      // Try to fetch from API
+      final apiData = await GeographyApiService.getGeographyFact(
+        difficulty: difficulty,
+      );
+      
+      if (apiData != null) {
+        return GeographyFact(
+          title: apiData['title'] as String,
+          description: apiData['description'] as String,
+          country: apiData['country'] as String?,
+          latitude: apiData['latitude'] as double?,
+          longitude: apiData['longitude'] as double?,
+        );
+      }
+    } catch (e) {
+      // If API fails, fall back to mock data
+      // In production, you might want to log this error
+    }
+    
+    // Fallback to mock data if API fails
     await Future.delayed(const Duration(milliseconds: 300));
     
     final facts = [
